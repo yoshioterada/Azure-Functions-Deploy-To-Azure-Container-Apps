@@ -231,6 +231,67 @@ Hello, World
 
 If everything is set up correctly, you should receive a response saying "Hello, World", confirming that your Azure Function is functioning as expected.
 
+## Setting Up Cosmos DB Trigger
+
+### 1. Add Cosmos DB Trigger Function
+
+Add a new function with Cosmos DB Trigger to read created state information and output it to the context log. Update the `Function.java` file to include the new function.
+
+```java
+@FunctionName("CosmosDBTriggerExample")
+public void cosmosDBTrigger(
+        @CosmosDBTrigger(
+            name = "cosmosDBTrigger",
+            databaseName = "YourDatabaseName",
+            collectionName = "YourCollectionName",
+            connectionStringSetting = "AzureWebJobsCosmosDBConnectionString",
+            leaseCollectionName = "leases",
+            createLeaseCollectionIfNotExists = true)
+            List<String> documents,
+        final ExecutionContext context) {
+    context.getLogger().info("Java Cosmos DB trigger processed a request.");
+
+    for (String document : documents) {
+        context.getLogger().info(document);
+    }
+}
+```
+
+### 2. Update `host.json`
+
+Configure Cosmos DB Trigger settings in the `host.json` file.
+
+```json
+{
+  "version": "2.0",
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[3.*, 4.0.0)"
+  },
+  "extensions": {
+    "cosmosDB": {
+      "connectionStringSetting": "AzureWebJobsCosmosDBConnectionString"
+    }
+  }
+}
+```
+
+### 3. Update `pom.xml`
+
+Add dependencies for Cosmos DB in the `pom.xml` file.
+
+```xml
+<dependency>
+    <groupId>com.microsoft.azure</groupId>
+    <artifactId>azure-cosmosdb</artifactId>
+    <version>2.6.3</version>
+</dependency>
+```
+
+### 4. Deploy and Test
+
+Deploy the updated Azure Function to Azure Container Apps and test the Cosmos DB Trigger by creating a new document in the specified Cosmos DB collection. Verify that the created state information is output to the context log.
+
 ## Summary
 
 In this guide, you learned how to:
@@ -243,5 +304,6 @@ In this guide, you learned how to:
 6. Create an Azure Container Apps environment and deploy the Java Azure Function.
 7. Assign necessary roles for secure access to Azure Container Registry.
 8. Retrieve and test the URL of the deployed Azure Function.
+9. Set up a Cosmos DB Trigger to read created state information and output it to the context log.
 
 By following these steps, you can successfully deploy a Java Azure Function on Azure Container Apps, leveraging the benefits of containerization and Azure's integrated management capabilities. If you have any further questions or need assistance with specific steps, feel free to ask!

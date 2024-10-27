@@ -233,3 +233,80 @@ az functionapp function show --resource-group $RESOURCE_GROUP_NAME --name $AZURE
 > curl "https://yoshiojavafunc.niceocean-********.eastus.azurecontainerapps.io/api/httpexample?name=World"
 Hello, World
 ```
+
+## Cosmos DB トリガーの設定
+
+### 1. Cosmos DB トリガー関数の追加
+
+作成された状態情報を読み取り、コンテキストログに出力するための Cosmos DB トリガー関数を追加します。`Function.java` ファイルを更新して、新しい関数を追加します。
+
+```java
+@FunctionName("CosmosDBTriggerExample")
+public void cosmosDBTrigger(
+        @CosmosDBTrigger(
+            name = "cosmosDBTrigger",
+            databaseName = "YourDatabaseName",
+            collectionName = "YourCollectionName",
+            connectionStringSetting = "AzureWebJobsCosmosDBConnectionString",
+            leaseCollectionName = "leases",
+            createLeaseCollectionIfNotExists = true)
+            List<String> documents,
+        final ExecutionContext context) {
+    context.getLogger().info("Java Cosmos DB trigger processed a request.");
+
+    for (String document : documents) {
+        context.getLogger().info(document);
+    }
+}
+```
+
+### 2. `host.json` の更新
+
+`host.json` ファイルに Cosmos DB トリガーの設定を追加します。
+
+```json
+{
+  "version": "2.0",
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[3.*, 4.0.0)"
+  },
+  "extensions": {
+    "cosmosDB": {
+      "connectionStringSetting": "AzureWebJobsCosmosDBConnectionString"
+    }
+  }
+}
+```
+
+### 3. `pom.xml` の更新
+
+`pom.xml` ファイルに Cosmos DB の依存関係を追加します。
+
+```xml
+<dependency>
+    <groupId>com.microsoft.azure</groupId>
+    <artifactId>azure-cosmosdb</artifactId>
+    <version>2.6.3</version>
+</dependency>
+```
+
+### 4. デプロイとテスト
+
+更新された Azure Function を Azure Container Apps にデプロイし、指定された Cosmos DB コレクションに新しいドキュメントを作成して Cosmos DB トリガーをテストします。作成された状態情報がコンテキストログに出力されることを確認します。
+
+## まとめ
+
+このガイドでは、以下の手順を学びました：
+
+1. Azure リソースの環境変数を設定する。
+2. Maven を使用して Java Azure Function プロジェクトを作成する。
+3. ロ���カルで Azure Function を実行してテストする。
+4. Azure Function の Docker イメージをビルドする。
+5. Docker イメージを Azure Container Registry にプッシュする。
+6. Azure Container Apps 環境を作成し、Java Azure Function をデプロイする。
+7. Azure Container Registry へのセキュアなアクセスのために必要なロールを割り当てる。
+8. デプロイされた Azure Function の URL を取得してテストする。
+9. Cosmos DB トリガーを設定して、作成された状態情報をコンテキストログに出力する。
+
+これらの手順に従うことで、コンテナ化の利点と Azure の統合管理機能を活用して、Azure Container Apps 上に Java Azure Function を正常にデプロイできます。さらに質問がある場合や特定の手順について支援が必要な場合は、お気軽にお尋ねください！
