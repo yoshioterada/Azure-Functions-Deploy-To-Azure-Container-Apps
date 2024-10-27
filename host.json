@@ -7,6 +7,11 @@
   "extensions": {
     "cosmosDB": {
       "connectionStringSetting": "AzureWebJobsCosmosDBConnectionString"
+    },
+    "blobs": {
+      "maxDegreeOfParallelism": 1,
+      "maxBatchSize": 100,
+      "pollingInterval": "00:00:10"
     }
   }
 }
