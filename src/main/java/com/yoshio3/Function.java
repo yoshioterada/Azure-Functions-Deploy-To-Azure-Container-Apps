@@ -10,12 +10,18 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.HttpTrigger;
 import com.microsoft.azure.functions.annotation.CosmosDBTrigger;
 import com.microsoft.azure.functions.CosmosDBInput;
+import com.microsoft.azure.functions.annotation.BlobTrigger;
 
 import java.util.Optional;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.IOException;
+import java.net.URL;
 
 /**
- * Azure Functions with HTTP Trigger and Cosmos DB Trigger.
+ * Azure Functions with HTTP Trigger, Cosmos DB Trigger, and Blob Trigger.
  */
 public class Function {
     /**
@@ -63,6 +69,35 @@ public class Function {
 
         for (String document : documents) {
             context.getLogger().info(document);
+        }
+    }
+
+    /**
+     * This function is triggered when a new file is uploaded to the specified Blob Storage container.
+     * It reads the content of text files and displays it, and displays the URL of image and sound files.
+     */
+    @FunctionName("BlobTriggerExample")
+    public void blobTrigger(
+            @BlobTrigger(
+                name = "blobTrigger",
+                path = "samples-workitems/{name}",
+                connection = "AzureWebJobsStorage")
+                byte[] content,
+            @BindingName("name") String filename,
+            final ExecutionContext context) {
+        context.getLogger().info("Java Blob trigger processed a request for file: " + filename);
+
+        if (filename.endsWith(".txt")) {
+            String fileContent = new String(content, StandardCharsets.UTF_8);
+            context.getLogger().info("Text file content: " + fileContent);
+        } else if (filename.endsWith(".jpg") || filename.endsWith(".png")) {
+            String fileUrl = "https://<your-storage-account-name>.blob.core.windows.net/samples-workitems/" + filename;
+            context.getLogger().info("Image file URL: " + fileUrl);
+        } else if (filename.endsWith(".mp3") || filename.endsWith(".wav")) {
+            String fileUrl = "https://<your-storage-account-name>.blob.core.windows.net/samples-workitems/" + filename;
+            context.getLogger().info("Sound file URL: " + fileUrl);
+        } else {
+            context.getLogger().info("Unsupported file type: " + filename);
         }
     }
 }
