@@ -307,3 +307,91 @@ In this guide, you learned how to:
 9. Set up a Cosmos DB Trigger to read created state information and output it to the context log.
 
 By following these steps, you can successfully deploy a Java Azure Function on Azure Container Apps, leveraging the benefits of containerization and Azure's integrated management capabilities. If you have any further questions or need assistance with specific steps, feel free to ask!
+
+## Querying Azure OpenAI's GPT-4o for Text Completion
+
+### 1. Update the HTTP Trigger Function
+
+Update the `HttpExample` function to receive the 'question' parameter instead of 'name' and query Azure OpenAI's GPT-4o for text completion. The updated function will process the 'question' parameter, query GPT-4o, and return the generated text.
+
+```java
+@FunctionName("HttpExample")
+public HttpResponseMessage run(
+        @HttpTrigger(
+            name = "req",
+            methods = {HttpMethod.GET, HttpMethod.POST},
+            authLevel = AuthorizationLevel.ANONYMOUS)
+            HttpRequestMessage<Optional<String>> request,
+        final ExecutionContext context) {
+    context.getLogger().info("Java HTTP trigger processed a request.");
+
+    // Parse query parameter
+    final String query = request.getQueryParameters().get("question");
+    final String question = request.getBody().orElse(query);
+
+    if (question == null) {
+        return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body("Please pass a question on the query string or in the request body").build();
+    } else {
+        try {
+            String response = queryGPT4o(question);
+            return request.createResponseBuilder(HttpStatus.OK).body(response).build();
+        } catch (IOException e) {
+            context.getLogger().severe("Error querying GPT-4o: " + e.getMessage());
+            return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR).body("Error querying GPT-4o").build();
+        }
+    }
+}
+
+private String queryGPT4o(String question) throws IOException {
+    String apiKey = System.getenv("AZURE_OPENAI_API_KEY");
+    String endpoint = System.getenv("AZURE_OPENAI_ENDPOINT");
+
+    URL url = new URL(endpoint + "/openai/deployments/gpt-4o/completions?api-version=2023-05-15");
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setRequestMethod("POST");
+    connection.setRequestProperty("Content-Type", "application/json");
+    connection.setRequestProperty("api-key", apiKey);
+    connection.setDoOutput(true);
+
+    JSONObject requestBody = new JSONObject();
+    requestBody.put("prompt", question);
+    requestBody.put("max_tokens", 100);
+
+    try (OutputStream os = connection.getOutputStream()) {
+        byte[] input = requestBody.toString().getBytes("utf-8");
+        os.write(input, 0, input.length);
+    }
+
+    StringBuilder response = new StringBuilder();
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
+        String responseLine;
+        while ((responseLine = br.readLine()) != null) {
+            response.append(responseLine.trim());
+        }
+    }
+
+    JSONObject jsonResponse = new JSONObject(response.toString());
+    return jsonResponse.getJSONArray("choices").getJSONObject(0).getString("text");
+}
+```
+
+### 2. Set Environment Variables for Azure OpenAI
+
+Set the environment variables for Azure OpenAI API key and endpoint. These variables will be used by the function to authenticate and query GPT-4o.
+
+```bash
+export AZURE_OPENAI_API_KEY=<your-azure-openai-api-key>
+export AZURE_OPENAI_ENDPOINT=<your-azure-openai-endpoint>
+```
+
+### 3. Test the Updated Function
+
+Deploy the updated function to Azure Container Apps and test it by sending a request with the 'question' parameter. The function should return the generated text from GPT-4o.
+
+```bash
+curl "https://yoshiojavafunc.niceocean-********.eastus.azurecontainerapps.io/api/httpexample?question=What%20is%20the%20capital%20of%20France?"
+# Expected Output: 
+The capital of France is Paris.
+```
+
+By following these steps, you can update the HTTP trigger function to query Azure OpenAI's GPT-4o for text completion and return the generated text. This allows you to leverage the power of Azure OpenAI's GPT-4o in your Azure Functions.
