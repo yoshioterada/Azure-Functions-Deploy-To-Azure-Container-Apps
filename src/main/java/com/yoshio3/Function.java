@@ -25,6 +25,10 @@ import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import org.json.JSONObject;
 
+import com.azure.ai.openai.OpenAIClient;
+import com.azure.ai.openai.models.CompletionsOptions;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+
 /**
  * Azure Functions with HTTP Trigger, Cosmos DB Trigger, and Blob Trigger.
  */
@@ -62,35 +66,16 @@ public class Function {
     }
 
     private String queryGPT4o(String question) throws IOException {
-        String apiKey = System.getenv("AZURE_OPENAI_API_KEY");
-        String endpoint = System.getenv("AZURE_OPENAI_ENDPOINT");
+        OpenAIClient client = new OpenAIClientBuilder()
+            .credential(new DefaultAzureCredentialBuilder().build())
+            .endpoint(System.getenv("AZURE_OPENAI_ENDPOINT"))
+            .buildClient();
 
-        URL url = new URL(endpoint + "/openai/deployments/gpt-4o/completions?api-version=2023-05-15");
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setRequestProperty("api-key", apiKey);
-        connection.setDoOutput(true);
+        CompletionsOptions options = new CompletionsOptions()
+            .setPrompt(question)
+            .setMaxTokens(100);
 
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("prompt", question);
-        requestBody.put("max_tokens", 100);
-
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.toString().getBytes("utf-8");
-            os.write(input, 0, input.length);
-        }
-
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
-            String responseLine;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-        }
-
-        JSONObject jsonResponse = new JSONObject(response.toString());
-        return jsonResponse.getJSONArray("choices").getJSONObject(0).getString("text");
+        return client.getCompletions("gpt-4o", options).getChoices().get(0).getText();
     }
 
     /**
